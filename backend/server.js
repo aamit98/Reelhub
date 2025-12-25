@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import authRoutes from './routes/auth.js';
@@ -25,8 +26,60 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Handle range requests for video streaming (must be before static middleware)
+app.get('/uploads/:filename', (req, res, next) => {
+  const range = req.headers.range;
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'uploads', filename);
+
+  // Only handle video files with range requests
+  const isVideo = filename.match(/\.(mp4|mov|avi|webm|m4v)$/i);
+  
+  if (!range || !isVideo) {
+    // No range request or not a video - let static middleware handle it
+    return next();
+  }
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).send('File not found');
+  }
+
+  const stat = fs.statSync(filePath);
+  const fileSize = stat.size;
+  
+  // Parse range header
+  const parts = range.replace(/bytes=/, '').split('-');
+  const start = parseInt(parts[0], 10);
+  const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+  const chunksize = (end - start) + 1;
+
+  const headers = {
+    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+    'Accept-Ranges': 'bytes',
+    'Content-Length': chunksize,
+    'Content-Type': 'video/mp4',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Expose-Headers': 'Content-Length, Content-Range',
+  };
+
+  res.writeHead(206, headers);
+  const stream = fs.createReadStream(filePath, { start, end });
+  stream.pipe(res);
+});
+
+// Serve uploaded files with proper headers for video streaming
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, filePath) => {
+    // Enable range requests for video streaming (allows seeking/scrubbing)
+    if (filePath.match(/\.(mp4|mov|avi|webm|m4v)$/i)) {
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Content-Type', 'video/mp4');
+      // Allow CORS for video requests
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    }
+  }
+}));
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -45,7 +45,7 @@ const Create = () => {
 
       // Use ImagePicker for videos - iPhone compatible settings
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Videos],
+        mediaTypes: 'videos',
         allowsEditing: false,
         quality: 1,
         videoMaxDuration: 60,
@@ -85,7 +85,7 @@ const Create = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: [ImagePicker.MediaType.Images],
+        mediaTypes: 'images',
         allowsEditing: true,
         aspect: [16, 9],
         quality: 1,

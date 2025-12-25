@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, Image, Alert, TextInput, Modal, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image, Alert, TextInput, Modal, RefreshControl, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useState, useEffect, useCallback } from "react";
@@ -89,7 +89,7 @@ const Profile = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: [ImagePicker.MediaType.Images],
+      mediaTypes: 'images',
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -201,8 +201,17 @@ const Profile = () => {
           transparent={true}
           onRequestClose={() => setIsEditModalVisible(false)}
         >
-          <View className="flex-1 bg-black/80 justify-end">
-            <View className="bg-primary rounded-t-3xl pt-6 pb-8 px-4">
+          <KeyboardAvoidingView 
+            className="flex-1 bg-black/80 justify-end"
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          >
+            <ScrollView 
+              className="bg-primary rounded-t-3xl pt-6 pb-8 px-4"
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            >
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-white font-psemibold text-xl">Edit Profile</Text>
                 <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
@@ -257,8 +266,8 @@ const Profile = () => {
                 containerStyles="w-full mt-6"
                 isLoading={isSubmitting}
               />
-            </View>
-          </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
         </Modal>
 
         {userVideos.length > 0 ? (

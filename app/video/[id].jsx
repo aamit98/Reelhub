@@ -1,9 +1,9 @@
 import { View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Linking, TextInput, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
-import { ResizeMode, Video } from "expo-av";
-import { getVideos, addBookmark, removeBookmark, checkBookmark, getComments, createComment, likeVideo, checkVideoLike, deleteVideo } from "../../lib/api";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ResizeMode, Video, useVideoPlayer } from "expo-av";
+import { getVideos, addBookmark, removeBookmark, checkBookmark, getComments, createComment, likeVideo, checkVideoLike, deleteVideo, getBaseUrl } from "../../lib/api";
 import { useGlobalContext } from "../../context/GlobalProvider";
 import { icons, images } from "../../constants";
 import { VideoCardInline, CommentItem } from "../../components";
@@ -23,6 +23,8 @@ const VideoDetails = () => {
   const [viewCount, setViewCount] = useState(0);
   const [videoError, setVideoError] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const videoRef = useRef(null);
   const [comments, setComments] = useState([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState("");
@@ -60,6 +62,36 @@ const VideoDetails = () => {
       }
     }, [video?.$id, user])
   );
+
+  // Helper to fix old hardcoded IP URLs to use current base URL
+  const fixVideoUrl = (url) => {
+    if (!url) return url;
+    
+    // If URL has hardcoded IP (old format), replace with current base URL
+    const hardcodedIpMatch = url.match(/http:\/\/\d+\.\d+\.\d+\.\d+:\d+\/(uploads\/.+)/);
+    if (hardcodedIpMatch) {
+      const baseUrl = getBaseUrl();
+      const fixedUrl = `${baseUrl}/${hardcodedIpMatch[1]}`;
+      console.log(`[URL Fix] Original: ${url}`);
+      console.log(`[URL Fix] Fixed: ${fixedUrl}`);
+      return fixedUrl;
+    }
+    
+    return url;
+  };
+
+  // Fix video and thumbnail URLs if they have hardcoded IPs
+  const originalVideoUrl = video?.video || null;
+  const videoUrl = originalVideoUrl ? fixVideoUrl(originalVideoUrl) : null;
+  const thumbnailUrl = video?.thumbnail ? fixVideoUrl(video.thumbnail) : null;
+
+  // Debug: Log URL transformation (MUST be before early returns)
+  useEffect(() => {
+    if (originalVideoUrl) {
+      console.log(`[Video URL Debug] Original: ${originalVideoUrl}`);
+      console.log(`[Video URL Debug] Transformed: ${videoUrl}`);
+    }
+  }, [originalVideoUrl, videoUrl]);
 
   const checkBookmarkStatus = async () => {
     try {
@@ -241,28 +273,44 @@ const VideoDetails = () => {
     );
   }
 
+  // Prepare video source with proper headers for HTTP streaming
+  const getVideoSource = () => {
+    if (!videoUrl) return null;
+    
+    console.log(`[Video Source] Using URL: ${videoUrl}`);
+    
+    // For HTTP videos, we need to ensure proper headers for range requests
+    return {
+      uri: videoUrl,
+      // Headers for better compatibility with HTTP video streaming
+      headers: {
+        'Accept': 'video/mp4, video/*, */*',
+      },
+    };
+  };
+
   // Check if video URL is a direct video file
   // Accept any HTTP URL that ends with video extension or is from our uploads folder
-  const isDirectVideo = video?.video && (
-    video.video.match(/\.(mp4|mov|avi|webm|m4v)$/i) || 
-    (video.video.startsWith('http') && 
-     !video.video.includes('vimeo.com') && 
-     !video.video.includes('youtube.com') && 
-     !video.video.includes('file://') && 
-     !video.video.includes('content://') &&
-     (video.video.includes('/uploads/') || video.video.match(/\.(mp4|mov|avi|webm|m4v)/i)))
+  const isDirectVideo = videoUrl && (
+    videoUrl.match(/\.(mp4|mov|avi|webm|m4v)$/i) || 
+    (videoUrl.startsWith('http') && 
+     !videoUrl.includes('vimeo.com') && 
+     !videoUrl.includes('youtube.com') && 
+     !videoUrl.includes('file://') && 
+     !videoUrl.includes('content://') &&
+     (videoUrl.includes('/uploads/') || videoUrl.match(/\.(mp4|mov|avi|webm|m4v)/i)))
   );
-  const isVimeoUrl = video?.video?.includes('vimeo.com');
-  const isLocalFile = video?.video?.startsWith('file://') || video?.video?.startsWith('content://');
+  const isVimeoUrl = videoUrl?.includes('vimeo.com');
+  const isLocalFile = videoUrl?.startsWith('file://') || videoUrl?.startsWith('content://');
 
   const handleVideoPress = () => {
     if (isVimeoUrl) {
       // Extract Vimeo video ID and open in browser or app
-      const vimeoId = video.video.match(/vimeo\.com\/video\/(\d+)/)?.[1];
+      const vimeoId = videoUrl?.match(/vimeo\.com\/video\/(\d+)/)?.[1] || video.video?.match(/vimeo\.com\/video\/(\d+)/)?.[1];
       if (vimeoId) {
         Linking.openURL(`https://vimeo.com/${vimeoId}`);
       } else {
-        Linking.openURL(video.video);
+        Linking.openURL(videoUrl || video.video);
       }
     } else if (isDirectVideo && !isLocalFile) {
       // Show and play the video inline
@@ -286,36 +334,110 @@ const VideoDetails = () => {
         }
       >
         <View className="w-full bg-black-100">
-          {showVideoPlayer && isDirectVideo && !isLocalFile && video?.video ? (
-            <View className="relative">
-              {/* Debug: Show video URL (remove in production) */}
-              {__DEV__ && (
-                <View className="absolute top-10 left-2 right-2 z-20 bg-black/80 p-2 rounded">
-                  <Text className="text-white text-xs" numberOfLines={2}>
-                    URL: {video.video}
-                  </Text>
+          {showVideoPlayer && isDirectVideo && !isLocalFile && videoUrl ? (
+            <View className="relative" style={{ minHeight: 240, backgroundColor: '#000', width: '100%' }}>
+              {videoLoading && (
+                <View className="absolute inset-0 items-center justify-center" style={{ zIndex: 10, backgroundColor: 'rgba(0,0,0,0.7)' }}>
+                  <ActivityIndicator size="large" color="#FF9C01" />
+                  <Text className="text-white text-sm mt-2">Loading video...</Text>
                 </View>
               )}
+              {!videoLoading && !videoError && (
+                <TouchableOpacity
+                  className="absolute bottom-2 left-2 bg-secondary rounded-full px-4 py-2"
+                  style={{ zIndex: 20 }}
+                  onPress={() => {
+                    if (videoRef.current) {
+                      videoRef.current.playAsync().catch(console.error);
+                    }
+                  }}
+                >
+                  <Text className="text-black font-psemibold text-xs">▶ Play</Text>
+                </TouchableOpacity>
+              )}
               <Video
-                key={video.$id}
-                source={{ uri: video.video }}
-                className="w-full h-60"
+                ref={videoRef}
+                key={`${video.$id}-${videoUrl}`}
+                source={getVideoSource()}
+                style={{ width: '100%', height: 240, backgroundColor: '#000' }}
                 resizeMode={ResizeMode.CONTAIN}
-                useNativeControls
+                useNativeControls={true}
                 shouldPlay={true}
                 isLooping={false}
+                isMuted={false}
+                volume={1.0}
+                progressUpdateIntervalMillis={250}
+                onReadyForDisplay={() => {
+                  console.log("Video ready for display - forcing play");
+                  if (videoRef.current) {
+                    videoRef.current.playAsync()
+                      .then(() => console.log("Video started playing from onReadyForDisplay"))
+                      .catch((err) => console.error("Error in onReadyForDisplay play:", err));
+                  }
+                }}
+                onLoadStart={() => {
+                  console.log("Video loading started:", videoUrl);
+                  setVideoLoading(true);
+                  setVideoError(false);
+                }}
+                onLoad={(status) => {
+                  console.log("Video loaded successfully:", status);
+                  console.log("Video URL in status:", status.uri);
+                  setVideoLoading(false);
+                  setVideoError(false);
+                  
+                  // Explicitly play the video when it's loaded and ready
+                  if (status.isLoaded && videoRef.current) {
+                    console.log("Attempting to play video...");
+                    // Try multiple times with delays to ensure it plays
+                    const playVideo = async () => {
+                      try {
+                        await videoRef.current.playAsync();
+                        console.log("Video play command sent successfully");
+                      } catch (error) {
+                        console.error("Error playing video:", error);
+                        // Retry after a short delay
+                        setTimeout(() => {
+                          videoRef.current?.playAsync().catch(console.error);
+                        }, 500);
+                      }
+                    };
+                    playVideo();
+                  }
+                }}
                 onError={(error) => {
                   console.error("Video playback error:", error);
-                  console.error("Video URL:", video.video);
+                  console.error("Video URL:", videoUrl);
+                  setVideoLoading(false);
                   setVideoError(true);
                   Alert.alert(
-                    "Video Error", 
-                    `Failed to play video.\n\nURL: ${video.video}\n\nTry opening this URL in your browser to test if it's accessible.`
+                    "Video Error",
+                    "Failed to play video. Please check:\n\n1. Your internet connection\n2. The video URL is accessible\n\nIf the problem persists, try refreshing the page."
                   );
                 }}
-                onLoad={() => {
-                  console.log("Video loaded successfully:", video.video);
-                  setVideoError(false);
+                onPlaybackStatusUpdate={(status) => {
+                  // Update loading state based on buffering
+                  if (status.isLoaded) {
+                    setVideoLoading(status.isBuffering);
+                  }
+                  
+                  if (status.error) {
+                    console.error("Playback status error:", status.error);
+                    setVideoError(true);
+                  }
+                  
+                  // Aggressively try to play if video should play but isn't
+                  if (status.isLoaded && status.shouldPlay && !status.isPlaying) {
+                    // Wait for at least some buffer (200ms) or if buffering completes
+                    if (!status.isBuffering || status.playableDurationMillis > 200) {
+                      console.log(`Attempting to play - buffering: ${status.isBuffering}, playable: ${status.playableDurationMillis}ms`);
+                      if (videoRef.current) {
+                        videoRef.current.playAsync()
+                          .then(() => console.log("Video started playing from status update"))
+                          .catch(console.error);
+                      }
+                    }
+                  }
                 }}
               />
               <TouchableOpacity
@@ -340,8 +462,8 @@ const VideoDetails = () => {
               className="relative"
             >
               <Image
-                key={video.thumbnail}
-                source={{ uri: video.thumbnail || "https://via.placeholder.com/400" }}
+                key={thumbnailUrl || video.thumbnail}
+                source={{ uri: thumbnailUrl || video.thumbnail || "https://via.placeholder.com/400" }}
                 className="w-full h-60"
                 resizeMode="cover"
                 onError={() => setVideoError(true)}
