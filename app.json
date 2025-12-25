@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "ReelHub",
+    "slug": "reelhub",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true, 
+      "package": "com.reelhub.app"
+    },
+    "android": {},
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "scheme": "reelhub",
+    "extra": {
+      "apiBaseUrl": "http://10.100.102.222:3000"
+    }
+  }
+}
