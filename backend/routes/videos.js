@@ -5,6 +5,31 @@ import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
 
+// Helper function to transform video/thumbnail URLs to use request host
+// This fixes URLs that were stored with hardcoded IPs
+const transformUrl = (url, req) => {
+  if (!url || typeof url !== 'string') return url;
+  
+  // If it's already a full URL with hardcoded IP, transform it
+  // Otherwise, if it's a relative path starting with /uploads, make it absolute
+  if (url.startsWith('/uploads/')) {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    return `${protocol}://${host}${url}`;
+  }
+  
+  // If it's a full URL with a hardcoded IP (like 10.100.102.222), replace with request host
+  const hardcodedIpMatch = url.match(/http:\/\/\d+\.\d+\.\d+\.\d+:\d+\/(uploads\/.+)/);
+  if (hardcodedIpMatch) {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    return `${protocol}://${host}/${hardcodedIpMatch[1]}`;
+  }
+  
+  // Return as-is for external URLs (YouTube, Vimeo, etc.)
+  return url;
+};
+
 // Get all videos with optional search
 router.get('/', async (req, res) => {
   try {
@@ -32,9 +57,9 @@ router.get('/', async (req, res) => {
     res.json(videos.map(video => ({
       $id: video._id.toString(),
       title: video.title,
-      thumbnail: video.thumbnail,
+      thumbnail: transformUrl(video.thumbnail, req),
       prompt: video.prompt,
-      video: video.video,
+      video: transformUrl(video.video, req),
       creator: {
         $id: video.creator._id.toString(),
         accountId: video.creator.accountId,
@@ -84,9 +109,9 @@ router.post('/', authenticate, [
     res.status(201).json({
       $id: newVideo._id.toString(),
       title: newVideo.title,
-      thumbnail: newVideo.thumbnail,
+      thumbnail: transformUrl(newVideo.thumbnail, req),
       prompt: newVideo.prompt,
-      video: newVideo.video,
+      video: transformUrl(newVideo.video, req),
       creator: {
         $id: newVideo.creator._id.toString(),
         accountId: newVideo.creator.accountId,
@@ -115,9 +140,9 @@ router.get('/:id', async (req, res) => {
     res.json({
       $id: video._id.toString(),
       title: video.title,
-      thumbnail: video.thumbnail,
+      thumbnail: transformUrl(video.thumbnail, req),
       prompt: video.prompt,
-      video: video.video,
+      video: transformUrl(video.video, req),
       creator: {
         $id: video.creator._id.toString(),
         accountId: video.creator.accountId,
@@ -166,9 +191,9 @@ router.post('/:id/like', authenticate, async (req, res) => {
     res.json({
       $id: video._id.toString(),
       title: video.title,
-      thumbnail: video.thumbnail,
+      thumbnail: transformUrl(video.thumbnail, req),
       prompt: video.prompt,
-      video: video.video,
+      video: transformUrl(video.video, req),
       creator: {
         $id: video.creator._id.toString(),
         accountId: video.creator.accountId,
@@ -251,9 +276,9 @@ router.get('/trending', async (req, res) => {
     const trending = videosWithScore.slice(0, 10).map(item => ({
       $id: item.video._id.toString(),
       title: item.video.title,
-      thumbnail: item.video.thumbnail,
+      thumbnail: transformUrl(item.video.thumbnail, req),
       prompt: item.video.prompt,
-      video: item.video.video,
+      video: transformUrl(item.video.video, req),
       creator: {
         $id: item.video.creator._id.toString(),
         accountId: item.video.creator.accountId,

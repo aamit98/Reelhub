@@ -5,6 +5,30 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Helper function to transform video/thumbnail URLs to use request host
+const transformUrl = (url, req) => {
+  if (!url || typeof url !== 'string') return url;
+  
+  // If it's already a full URL with hardcoded IP, transform it
+  // Otherwise, if it's a relative path starting with /uploads, make it absolute
+  if (url.startsWith('/uploads/')) {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    return `${protocol}://${host}${url}`;
+  }
+  
+  // If it's a full URL with a hardcoded IP (like 10.100.102.222), replace with request host
+  const hardcodedIpMatch = url.match(/http:\/\/\d+\.\d+\.\d+\.\d+:\d+\/(uploads\/.+)/);
+  if (hardcodedIpMatch) {
+    const host = req.get("host");
+    const protocol = req.protocol;
+    return `${protocol}://${host}/${hardcodedIpMatch[1]}`;
+  }
+  
+  // Return as-is for external URLs (YouTube, Vimeo, etc.)
+  return url;
+};
+
 // Get all bookmarks for current user
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -23,9 +47,9 @@ router.get('/', authenticate, async (req, res) => {
       .map(bookmark => ({
         $id: bookmark.video._id.toString(),
         title: bookmark.video.title,
-        thumbnail: bookmark.video.thumbnail,
+        thumbnail: transformUrl(bookmark.video.thumbnail, req),
         prompt: bookmark.video.prompt,
-        video: bookmark.video.video,
+        video: transformUrl(bookmark.video.video, req),
         creator: {
           $id: bookmark.video.creator._id.toString(),
           accountId: bookmark.video.creator.accountId,

@@ -288,6 +288,14 @@ const VideoDetails = () => {
         <View className="w-full bg-black-100">
           {showVideoPlayer && isDirectVideo && !isLocalFile && video?.video ? (
             <View className="relative">
+              {/* Debug: Show video URL (remove in production) */}
+              {__DEV__ && (
+                <View className="absolute top-10 left-2 right-2 z-20 bg-black/80 p-2 rounded">
+                  <Text className="text-white text-xs" numberOfLines={2}>
+                    URL: {video.video}
+                  </Text>
+                </View>
+              )}
               <Video
                 key={video.$id}
                 source={{ uri: video.video }}
@@ -298,10 +306,15 @@ const VideoDetails = () => {
                 isLooping={false}
                 onError={(error) => {
                   console.error("Video playback error:", error);
+                  console.error("Video URL:", video.video);
                   setVideoError(true);
-                  Alert.alert("Video Error", "Failed to play video. The video file may be corrupted or the URL is invalid.");
+                  Alert.alert(
+                    "Video Error", 
+                    `Failed to play video.\n\nURL: ${video.video}\n\nTry opening this URL in your browser to test if it's accessible.`
+                  );
                 }}
                 onLoad={() => {
+                  console.log("Video loaded successfully:", video.video);
                   setVideoError(false);
                 }}
               />

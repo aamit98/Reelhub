@@ -85,7 +85,7 @@ Server runs on `http://localhost:3000`
 npm install
 ```
 
-Update `app.json` with your computer's IP address (for physical device testing):
+**Optional:** If you need to specify a custom API URL, update `app.json`:
 
 ```json
 {
@@ -97,9 +97,12 @@ Update `app.json` with your computer's IP address (for physical device testing):
 }
 ```
 
-Find your IP:
-- Windows: `ipconfig`
-- Mac/Linux: `ifconfig`
+**Note:** The app automatically detects the API URL based on your environment:
+- Android emulator: `http://10.0.2.2:3000`
+- iOS simulator: `http://localhost:3000`
+- Physical device: Automatically uses the correct LAN IP
+
+If you leave `apiBaseUrl` empty in `app.json`, the app will use the automatic detection.
 
 ### 5. Start Expo App
 
@@ -182,12 +185,15 @@ This project uses **NativeWind** (Tailwind CSS for React Native). Styles are wri
 ### Backend Connection Issues
 - Check if backend is running on port 3000
 - Verify MongoDB connection
-- Check IP address in `app.json` matches your computer's IP
+- The backend automatically uses the request host for file URLs, so video URLs should work across different environments
+- If testing on a physical device, ensure your device and computer are on the same WiFi network
 
 ### Video Playback Issues
 - Ensure video URLs are accessible HTTP/HTTPS links
 - Check video format is supported (mp4, mov, avi, webm)
-- Verify video URLs are properly formatted and accessible
+- The app includes debug logging in development mode - check the console for video URL details
+- If a video fails to play, try opening the video URL in your device's browser to verify accessibility
+- For Android: Cleartext HTTP traffic is enabled in `app.json` (required for local development)
 
 ### Metro Bundler Issues
 - Clear cache: `npx expo start --clear`

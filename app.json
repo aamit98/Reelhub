@@ -12,14 +12,16 @@
       "supportsTablet": true, 
       "package": "com.reelhub.app"
     },
-    "android": {},
+    "android": {
+      "usesCleartextTraffic": true
+    },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "scheme": "reelhub",
     "extra": {
-      "apiBaseUrl": "http://10.100.102.222:3000"
+      "apiBaseUrl": ""
     }
   }
 }

@@ -48,12 +48,11 @@ router.post('/', authenticate, upload.single('file'), (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Return the file URL (in production, this would be a cloud storage URL)
-    // For local development, use the server's IP address
-    // Get the IP from the request or use environment variable
-    const serverIP = process.env.SERVER_IP || '10.100.102.222';
-    const port = process.env.PORT || 3000;
-    const fileUrl = `http://${serverIP}:${port}/uploads/${req.file.filename}`;
+    // Return the file URL using the request host (works across different environments)
+    // This automatically handles: localhost, LAN IP, emulator (10.0.2.2), etc.
+    const host = req.get("host");          // e.g., "10.0.2.2:3000" or "192.168.1.50:3000"
+    const protocol = req.protocol;         // "http" or "https"
+    const fileUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
     
     res.json({
       url: fileUrl,

@@ -38,7 +38,7 @@ app.use('/api/upload', uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Aora API is running' });
+  res.json({ status: 'OK', message: 'ReelHub API is running' });
 });
 
 // Error handling middleware - must be after all routes
@@ -55,14 +55,16 @@ app.use((req, res) => {
 });
 
 // Connect to MongoDB
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/aora';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/reelhub';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ Connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    // Listen on all network interfaces (0.0.0.0) to allow LAN access
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
       console.log(`📝 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`💡 Access from LAN: Use your computer's IP address with port ${PORT}`);
     });
   })
   .catch((error) => {
@@ -72,7 +74,7 @@ mongoose.connect(MONGODB_URI)
     console.error('2. Use MongoDB Atlas (free): https://www.mongodb.com/cloud/atlas');
     console.error('3. Update MONGODB_URI in .env file');
     console.error('\n📌 For MongoDB Atlas, your URI should look like:');
-    console.error('   mongodb+srv://username:password@cluster.mongodb.net/aora');
+    console.error('   mongodb+srv://username:password@cluster.mongodb.net/reelhub');
     process.exit(1);
   });
 
