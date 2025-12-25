@@ -1,7 +1,7 @@
 {
-  "name": "aora-backend",
+  "name": "reelhub-backend",
   "version": "1.0.0",
-  "description": "Backend API for Aora React Native app",
+  "description": "Backend API for ReelHub React Native app",
   "main": "server.js",
   "type": "module",
   "scripts": {

@@ -26,7 +26,6 @@ yarn-error.log*
 # Expo
 .expo/
 .expo-shared/
-.expo/
 
 # React Native
 *.jks

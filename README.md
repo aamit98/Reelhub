@@ -41,8 +41,8 @@ A React Native video sharing app built with Expo, featuring user authentication,
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
-cd reelhub  # or your folder name
+git clone https://github.com/aamit98/Reelhub.git
+cd Reelhub
 ```
 
 ### 2. Backend Setup
@@ -187,7 +187,7 @@ This project uses **NativeWind** (Tailwind CSS for React Native). Styles are wri
 ### Video Playback Issues
 - Ensure video URLs are accessible HTTP/HTTPS links
 - Check video format is supported (mp4, mov, avi, webm)
-- See `VIDEO_PLAYBACK_LOGIC.md` for detailed debugging
+- Verify video URLs are properly formatted and accessible
 
 ### Metro Bundler Issues
 - Clear cache: `npx expo start --clear`
