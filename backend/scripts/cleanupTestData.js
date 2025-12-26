@@ -7,7 +7,7 @@ import Comment from '../models/Comment.js';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/aora';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/reelhub';
 
 async function cleanupTestData() {
   try {

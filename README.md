@@ -180,6 +180,22 @@ This project uses **NativeWind** (Tailwind CSS for React Native). Styles are wri
 </View>
 ```
 
+## 🎬 Demo/Recording Setup
+
+To reset the database with clean demo data for recordings:
+
+```bash
+cd backend
+npm run reset-demo
+```
+
+This creates:
+- 3 demo users (login: `alex@demo.com` / `tech@demo.com` / `nature@demo.com` - password: `demo123`)
+- 6 sample videos with views, likes, and comments
+- Clean database ready for demo recording
+
+See `RESET_DEMO.md` for more details.
+
 ## 🐛 Troubleshooting
 
 ### Backend Connection Issues
